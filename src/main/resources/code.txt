@@ -1,0 +1,76 @@
+import org.custommonkey.xmlunit.DetailedDiff;
+import org.custommonkey.xmlunit.Diff;
+import org.custommonkey.xmlunit.XMLUnit;
+import org.junit.jupiter.api.Test;
+import org.xml.sax.SAXException;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+public class Test1 {
+
+
+    @Test
+    public void xmlTest() {
+        List<Path> targetFilesPath = getAllFiles("TargetXml");
+        String sourceFilepath= Objects.requireNonNull(getClass().getClassLoader().getResource("SourceXml/xmltest1.xml")).getPath().replaceFirst("/","");
+        String source = readFileAsString(sourceFilepath);
+        for (Path path : targetFilesPath) {
+            String target = readFileAsString(path.toString());
+            int i=sourceFilepath.lastIndexOf('/')+1;
+            int j=sourceFilepath.length();
+            System.out.printf("Source file is \"%s\", target file to compare is \"%s\"%n"
+            ,sourceFilepath.substring(i,j), path.getFileName().toString());
+            XMLComparer(source, target);
+        }
+
+
+    }
+
+    public void XMLComparer(String source, String target) {
+        XMLUnit.setIgnoreWhitespace(false); // ignore whitespace differences
+        XMLUnit.setIgnoreAttributeOrder(true);
+        XMLUnit.setIgnoreComments(true);
+        try {
+            Diff xmlDiff = new Diff(source, target);
+            DetailedDiff detailXmlDiff = new DetailedDiff(xmlDiff);
+            List diff = detailXmlDiff.getAllDifferences();
+            diff.forEach(System.out::println);
+            if (diff.size() > 0)
+                System.out.printf("Total differences is \"%d\"%n", diff.size());
+            else
+                System.out.println("Completely matched");
+        } catch (SAXException | IOException e) {
+        }
+    }
+
+    public List<Path> getAllFiles(String directorName ) {
+        List<Path> files = new ArrayList<>();
+        Path path = Path.of(Objects.requireNonNull(getClass().getClassLoader().getResource(directorName)).getPath()
+                        .replaceFirst("/",""));
+        try (Stream<Path> walk = Files.walk(path)) {
+            files = walk.filter(Files::isRegularFile)
+                    .collect(Collectors.toList());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return files;
+    }
+
+
+    public String readFileAsString(String fileDirectory) {
+        try {
+            return new String(Files.readAllBytes(Paths.get(fileDirectory)));
+        } catch (IOException e) {
+            return "";
+        }
+    }
+}
+
